@@ -105,6 +105,11 @@ func (cj *Cronjob) Check(job *job.Job) (*cronCTX, error) {
 		if checkMethod == "" {
 			return nil, fmt.Errorf("there is no %s method inside the contract abi", checkMethod)
 		}
+
+		_, err := sc.Call(contract, client, job.Address, *job.CheckMethod, &bind.CallOpts{})
+		if err != nil {
+			return nil, fmt.Errorf("the abi doesn't match with the contract address")
+		}
 	}
 	fmt.Println("checkMethod is OK!")
 

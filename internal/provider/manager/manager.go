@@ -77,9 +77,6 @@ func (m *M) Setup(job *job.Job) error {
 	newCron := cron.New()
 	cronjob := NewCronjob(m, newCron)
 
-	// Update cron map instance with new cron
-	m.CronMap[job.ID] = newCron
-
 	// Check if the inputs for the cron are right
 	cronCTX, err := cronjob.Check(job)
 	if err != nil {
@@ -112,6 +109,9 @@ func (m *M) Setup(job *job.Job) error {
 
 		return err
 	}
+
+	// Update cron map instance with new cron
+	m.CronMap[job.ID] = newCron
 
 	// Add job to the cron
 	stop := make(chan bool)
