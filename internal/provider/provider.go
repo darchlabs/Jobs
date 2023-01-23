@@ -10,7 +10,6 @@ type Provider struct {
 // Interface required for each new implementation
 type Operator interface {
 	SetupAndRun(c *Config) error
-	GetState(name string) (state State)
 }
 
 // Config struct for setup

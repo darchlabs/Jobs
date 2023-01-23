@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/darchlabs/jobs/internal/api"
 	"github.com/darchlabs/jobs/internal/job"
 	"github.com/darchlabs/jobs/internal/provider"
 	sc "github.com/darchlabs/jobs/internal/provider/smart-contracts"
@@ -48,45 +49,47 @@ func (cj *Cronjob) Check(job *job.Job) (*cronCTX, error) {
 	fmt.Println("Getting network..")
 	chainId := getChainId(job.Network)
 	if chainId == int64(0) {
-		return nil, fmt.Errorf("invalid chain id for %s network", job.Network)
+		return nil, fmt.Errorf("%s", api.ErrorInvalidNetwork)
 	}
 	fmt.Println("Network obtained!")
 
+	fmt.Println("Getting client ...")
 	client, err := ethclient.Dial(job.NodeURL)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s", api.ErrorInvalidClient)
 	}
+	fmt.Println("Client obtained!")
 
 	fmt.Println("Getting signer...")
 	signer, err = sc.GetSigner(job.Privatekey, *client, chainId, nil, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s", api.ErrorInvalidSigner)
 	}
 	fmt.Println("Signer ready!")
 
-	/// @dev: The abi format must be JSON escaped in order to work correctly
 	fmt.Println("Parsing abi...")
 	parsedAbi, err = abi.JSON(strings.NewReader(job.Abi))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s", api.ErrorInvalidAbi)
 	}
 	fmt.Println("Abi parsed!")
 
 	// Check that the address indeed is deployed on the network
+	fmt.Println("Checking contract code exists...")
 	contractCode, err := client.PendingCodeAt(context.Background(), common.HexToAddress(job.Address))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s", api.ErrorInexistentAddress)
 	}
 
 	if len(contractCode) == 0 {
-		return nil, fmt.Errorf("%s", "the contract address doesn't exist")
+		return nil, fmt.Errorf("%s", api.ErrorInexistentAddress)
 	}
+	fmt.Println("Code exist in the blockchain!")
 
 	fmt.Println("Getting contract...")
 	contract = sc.GetContract(job.Address, parsedAbi, client)
-
 	if contract == nil {
-		return nil, fmt.Errorf("there is no contract under the %s address and abi on the %s network", job.Address, job.Network)
+		return nil, fmt.Errorf("%s", api.ErrorInvalidContract)
 	}
 	fmt.Println("Contract ready!")
 
@@ -94,7 +97,7 @@ func (cj *Cronjob) Check(job *job.Job) (*cronCTX, error) {
 	fmt.Println("Getting actionMethod...")
 	actionMethod := parsedAbi.Methods[job.ActionMethod].String()
 	if actionMethod == "" {
-		return nil, fmt.Errorf("there is no %s method inside the contract abi", actionMethod)
+		return nil, fmt.Errorf("%s", api.ErrorInvalidAbi)
 	}
 	fmt.Println("actionMethod is OK!")
 
@@ -103,12 +106,12 @@ func (cj *Cronjob) Check(job *job.Job) (*cronCTX, error) {
 	if job.CheckMethod != nil {
 		checkMethod := parsedAbi.Methods[*job.CheckMethod].String()
 		if checkMethod == "" {
-			return nil, fmt.Errorf("there is no %s method inside the contract abi", checkMethod)
+			return nil, fmt.Errorf("%s", api.ErrorInvalidContract)
 		}
 
 		_, err := sc.Call(contract, client, job.Address, *job.CheckMethod, &bind.CallOpts{})
 		if err != nil {
-			return nil, fmt.Errorf("the abi doesn't match with the contract address")
+			return nil, fmt.Errorf("%s", api.ErrorInvalidContract)
 		}
 	}
 	fmt.Println("checkMethod is OK!")
@@ -149,7 +152,7 @@ func (cj *Cronjob) AddJob(job *job.Job, ctx *cronCTX, stop chan bool) error {
 				log = fmt.Sprintf("Error while trying to call checkMethod: %v", err)
 
 				if errCounter > maxErrorsLimit {
-					stopLog := fmt.Sprintf("Failed 3 times so stopped job. Last error: %s", log)
+					stopLog := fmt.Sprintf("Failed %v times so stopped job. Last error: %s", maxErrorsLimit, log)
 					updateJob(cj.jobstorage, job, stopLog)
 
 					stop <- true
@@ -215,11 +218,6 @@ func (cj *Cronjob) AddJob(job *job.Job, ctx *cronCTX, stop chan bool) error {
 	}
 
 	return nil
-}
-
-// TODO(nb): Implement a function that gets and returns the state of the service
-func GetState(id string) (state provider.State) {
-	return provider.StatusRunning
 }
 
 // Method for stopping cronjob when an error is occurred
