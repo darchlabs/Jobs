@@ -9,8 +9,7 @@ type Provider struct {
 
 // Interface required for each new implementation
 type Operator interface {
-	Setup(c *Config) error
-	GetState(name string) (state State)
+	SetupAndRun(c *Config) error
 }
 
 // Config struct for setup
@@ -27,10 +26,9 @@ type Config struct {
 type State string
 
 const (
-	StatusIdle     State = "idle"
-	StatusStarting State = "starting"
-	StatusRunning  State = "running"
-	StatusStopping State = "stopping"
-	StatusStopped  State = "stopped"
-	StatusError    State = "error"
+	StatusIdle        State = "idle"
+	StatusRunning     State = "running"
+	StatusStopped     State = "stopped"
+	StatusError       State = "error"
+	StatusAutoStopped State = "autoStopped"
 )
