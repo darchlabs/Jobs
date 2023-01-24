@@ -33,7 +33,7 @@ func HandleFunc(fn handler) func(c *fiber.Ctx) error {
 
 		// Prepare response
 		res := api.Response{
-			Meta: map[string]interface{}{"statusCode": statusCode},
+			Meta: statusCode,
 			Data: payload,
 		}
 
