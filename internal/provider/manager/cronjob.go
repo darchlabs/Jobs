@@ -54,7 +54,14 @@ func (cj *Cronjob) Check(job *job.Job) (*cronCTX, error) {
 	fmt.Println("Network obtained!")
 
 	fmt.Println("Getting client ...")
+	// Get client
 	client, err := ethclient.Dial(job.NodeURL)
+	if err != nil {
+		return nil, fmt.Errorf("%s", api.ErrorInvalidClient)
+	}
+
+	// Validate client is working correctly
+	_, err = client.ChainID(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("%s", api.ErrorInvalidClient)
 	}
