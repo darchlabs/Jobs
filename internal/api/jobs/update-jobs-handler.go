@@ -88,8 +88,7 @@ func (UpdateJobHandler) Invoke(ctx Context) *api.HandlerRes {
 
 	if body.Req.Cronjob != "" && body.Req.Cronjob != job.Cronjob {
 		// Validate the cronjob received is correct
-		specParser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
-
+		specParser := cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
 		_, err = specParser.Parse(body.Req.Cronjob)
 		if err != nil {
 			return &api.HandlerRes{

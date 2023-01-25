@@ -51,7 +51,7 @@ func (CreateJobsHandler) Invoke(ctx Context) *api.HandlerRes {
 
 	if body.Job.Type == "cronjob" {
 		// Validate the cronjob received is correct
-		specParser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+		specParser := cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
 		_, err = specParser.Parse(body.Job.Cronjob)
 
 		if err != nil {
