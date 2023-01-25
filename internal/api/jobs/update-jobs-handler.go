@@ -9,6 +9,7 @@ import (
 	"github.com/darchlabs/jobs/internal/provider"
 	"github.com/darchlabs/jobs/internal/storage"
 	"github.com/go-playground/validator"
+	"github.com/robfig/cron"
 )
 
 type UpdateBody struct {
@@ -48,7 +49,10 @@ func (UpdateJobHandler) Invoke(ctx Context) *api.HandlerRes {
 
 	fmt.Println("Validating...")
 	validate := validator.New()
-	validate.Struct(ctx.JobStorage)
+	err = validate.Struct(ctx.JobStorage)
+	if err != nil {
+		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 500, Err: err}
+	}
 	fmt.Println("Validated!")
 
 	fmt.Println("Getting job...")
@@ -67,11 +71,6 @@ func (UpdateJobHandler) Invoke(ctx Context) *api.HandlerRes {
 		empty = false
 	}
 
-	if body.Req.Cronjob != "" && body.Req.Cronjob != job.Cronjob {
-		job.Cronjob = body.Req.Cronjob
-		empty = false
-	}
-
 	if body.Req.Network != "" && body.Req.Network != job.Network {
 		job.Network = body.Req.Network
 		empty = false
@@ -84,6 +83,23 @@ func (UpdateJobHandler) Invoke(ctx Context) *api.HandlerRes {
 
 	if body.Req.Privatekey != "" && body.Req.Privatekey != job.Privatekey {
 		job.Privatekey = body.Req.Privatekey
+		empty = false
+	}
+
+	if body.Req.Cronjob != "" && body.Req.Cronjob != job.Cronjob {
+		// Validate the cronjob received is correct
+		specParser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+
+		_, err = specParser.Parse(body.Req.Cronjob)
+		if err != nil {
+			return &api.HandlerRes{
+				Payload:    api.ErrorInvalidCron,
+				HttpStatus: 400,
+				Err:        err,
+			}
+		}
+
+		job.Cronjob = body.Req.Cronjob
 		empty = false
 	}
 

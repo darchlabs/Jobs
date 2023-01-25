@@ -10,4 +10,5 @@ const (
 	ErrorInvalidAbi        Error = "INVALID_ABI"
 	ErrorInexistentAddress Error = "INEXISTENT_ADDRESS"
 	ErrorInvalidContract   Error = "INVALID_CONTRACT"
+	ErrorInvalidCron       Error = "INVALID_CRON"
 )

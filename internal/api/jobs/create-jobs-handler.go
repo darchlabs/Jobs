@@ -33,16 +33,19 @@ func (CreateJobsHandler) Invoke(ctx Context) *api.HandlerRes {
 	// Parse body to Job struct
 	err := json.Unmarshal(ctx.c.Body(), &body)
 	if err != nil {
-		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 500, Err: err}
+		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 400, Err: err}
 	}
 
 	validate := validator.New()
-	validate.Struct(ctx.JobStorage)
+	err = validate.Struct(ctx.JobStorage)
+	if err != nil {
+		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 400, Err: err}
+	}
 
 	// generate id for database
 	id, err := shortid.Generate()
 	if err != nil {
-		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 500, Err: err}
+		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 400, Err: err}
 	}
 	body.Job.ID = id
 
@@ -53,19 +56,19 @@ func (CreateJobsHandler) Invoke(ctx Context) *api.HandlerRes {
 
 		if err != nil {
 			fmt.Println(err)
-			return &api.HandlerRes{Payload: err.Error(), HttpStatus: 500, Err: err}
+			return &api.HandlerRes{Payload: api.ErrorInvalidCron, HttpStatus: 400, Err: err}
 		}
 
 		// Execute manager in order to execute the job
 		err = ctx.Manager.Setup(body.Job)
 		if err != nil {
-			return &api.HandlerRes{Payload: err.Error(), HttpStatus: 500, Err: err}
+			return &api.HandlerRes{Payload: err.Error(), HttpStatus: 400, Err: err}
 		}
 		ctx.Manager.Start(id)
 
 	} else {
 		err = fmt.Errorf("only 'cronjob' type is supported now, but received '%s' type", err)
-		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 500, Err: err}
+		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 400, Err: err}
 	}
 
 	body.Job.CreatedAt = time.Now()
@@ -75,7 +78,7 @@ func (CreateJobsHandler) Invoke(ctx Context) *api.HandlerRes {
 	j, err := ctx.JobStorage.Insert(body.Job)
 	if err != nil {
 		fmt.Println(err)
-		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 500, Err: err}
+		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 400, Err: err}
 	}
 
 	return &api.HandlerRes{Payload: j, HttpStatus: 200, Err: nil}
