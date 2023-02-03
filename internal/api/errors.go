@@ -2,8 +2,9 @@ package api
 
 type Error string
 
+// Define errors
 const (
-	// Cronjob check possible errors
+	// Cronjob check errors
 	ErrorInvalidNetwork    Error = "INVALID_NETWORK"
 	ErrorInvalidClient     Error = "INVALID_CLIENT"
 	ErrorInvalidSigner     Error = "INVALID_SIGNER"

@@ -17,6 +17,7 @@ func NewJob(s *S) *Job {
 	}
 }
 
+// Method for listing jobs array
 func (j *Job) List() ([]*job.Job, error) {
 	data := make([]*job.Job, 0)
 
@@ -40,6 +41,7 @@ func (j *Job) List() ([]*job.Job, error) {
 	return data, nil
 }
 
+// Method for getting job by its id
 func (j *Job) GetById(id string) (*job.Job, error) {
 	data, err := j.storage.DB.Get([]byte(id), nil)
 	if err != nil {
@@ -55,6 +57,7 @@ func (j *Job) GetById(id string) (*job.Job, error) {
 	return job, nil
 }
 
+// Method for inserting job in the DB
 func (j *Job) Insert(job *job.Job) (*job.Job, error) {
 	b, err := json.Marshal(job)
 	if err != nil {
@@ -70,6 +73,7 @@ func (j *Job) Insert(job *job.Job) (*job.Job, error) {
 	return job, nil
 }
 
+// Method for updating job in the DB
 func (j *Job) Update(job *job.Job) (*job.Job, error) {
 	job.UpdatedAt = time.Now()
 
@@ -87,6 +91,7 @@ func (j *Job) Update(job *job.Job) (*job.Job, error) {
 	return job, nil
 }
 
+// Method for deleting job from the DB
 func (j *Job) Delete(id string) error {
 	err := j.storage.DB.Delete([]byte(id), nil)
 	if err != nil {
@@ -96,6 +101,7 @@ func (j *Job) Delete(id string) error {
 	return nil
 }
 
+// Method for stopping job
 func (j *Job) Stop() error {
 	return j.storage.DB.Close()
 }

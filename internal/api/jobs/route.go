@@ -29,7 +29,7 @@ func Route(app *fiber.App, ctx Context) {
 	app.Post("/api/v1/jobs/:id/stop", HandleFunc(stopJobHandler.Invoke, ctx))
 	app.Post("/api/v1/jobs/:id/start", HandleFunc(startJobHandler.Invoke, ctx))
 	app.Patch("/api/v1/jobs/:id", HandleFunc(updateJobHandler.Invoke, ctx))
-	app.Post("/api/v1/jobs/:id/delete", HandleFunc(deleteJobHandler.Invoke, ctx))
+	app.Delete("/api/v1/jobs/:id", HandleFunc(deleteJobHandler.Invoke, ctx))
 }
 
 // Func that receives the returns from handlers and creates an http response

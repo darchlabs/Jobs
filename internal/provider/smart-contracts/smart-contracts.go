@@ -12,9 +12,9 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
+// Method for getting a contract instance
 func GetContract(address string, inputAbi abi.ABI, backend bind.ContractBackend) *bind.BoundContract {
 	contract := bind.NewBoundContract(common.HexToAddress(address), inputAbi, backend, backend, backend)
-
 	return contract
 }
 
@@ -50,6 +50,7 @@ func Perform(contract *bind.BoundContract, client *ethclient.Client, address str
 	return tx, nil
 }
 
+// Method for getting an instance of the signer
 func GetSigner(pk string, client ethclient.Client, chainId int64, gasPrice *int64, gasLimit *uint64) (*bind.TransactOpts, error) {
 	// parse private key to ECDSA
 	privateKey, err := crypto.HexToECDSA(pk)

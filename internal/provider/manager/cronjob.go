@@ -154,12 +154,10 @@ func (cj *Cronjob) AddJob(job *job.Job, ctx *cronCTX, stop chan bool) error {
 			res, err := sc.Call(ctx.contract, ctx.client, job.Address, *job.CheckMethod, &bind.CallOpts{})
 			if err != nil {
 				errCounter += 1
-				fmt.Println("errCounter: ", errCounter)
-
 				log = fmt.Sprintf("Error while trying to call checkMethod: %v", err)
 
 				if errCounter > maxErrorsLimit {
-					stopLog := fmt.Sprintf("Failed %v times so stopped job. Last error: %s", maxErrorsLimit, log)
+					stopLog := fmt.Sprintf("Failed %v times so autostopped. Last error: %s", maxErrorsLimit, log)
 					updateJob(cj.jobstorage, job, stopLog)
 
 					stop <- true
