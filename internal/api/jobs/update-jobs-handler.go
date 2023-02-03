@@ -9,15 +9,18 @@ import (
 	"github.com/darchlabs/jobs/internal/provider"
 	"github.com/darchlabs/jobs/internal/storage"
 	"github.com/go-playground/validator"
-	"github.com/robfig/cron"
 )
 
 type UpdateBody struct {
-	Network    string `json:"network"`
-	NodeURL    string `json:"nodeUrl"`
-	Privatekey string `json:"privateKey"`
-	Address    string `json:"address"`
-	Cronjob    string `json:"cronjob"`
+	Name         string `json:"name"`
+	Network      string `json:"network"`
+	NodeURL      string `json:"nodeUrl"`
+	Privatekey   string `json:"privateKey"`
+	Address      string `json:"address"`
+	Abi          string `json:"abi"`
+	CheckMethod  string `json:"checkMethod"`
+	ActionMethod string `json:"cctionMethod"`
+	Cronjob      string `json:"cronjob"`
 }
 
 type UpdateJobHandler struct {
@@ -31,12 +34,14 @@ func NewUpdateJobHandler(js *storage.Job) *UpdateJobHandler {
 }
 
 func (UpdateJobHandler) Invoke(ctx Context) *api.HandlerRes {
+	// Get and check id
 	id := ctx.c.Params("id")
 	if id == "" {
 		err := fmt.Errorf("%s", "id param in route is empty")
 		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 500, Err: err}
 	}
 
+	// Prepare body request struct for parsing and validating
 	body := struct {
 		Req *UpdateBody `json:"job"`
 	}{}
@@ -47,87 +52,47 @@ func (UpdateJobHandler) Invoke(ctx Context) *api.HandlerRes {
 		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 500, Err: err}
 	}
 
-	fmt.Println("Validating...")
+	// Validate the job values to update are correct
 	validate := validator.New()
 	err = validate.Struct(ctx.JobStorage)
 	if err != nil {
 		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 500, Err: err}
 	}
-	fmt.Println("Validated!")
 
-	fmt.Println("Getting job...")
+	// Get j ob using id
 	job, err := ctx.JobStorage.GetById(id)
 	if err != nil {
 		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 500, Err: err}
 	}
-	fmt.Println("Job got!")
 
-	// This is for checking that at least there is a param to be modified in the request
-	empty := true
-
-	// Update jobs params that were sent in the request
-	if body.Req.Address != "" && body.Req.Address != job.Address {
-		job.Address = body.Req.Address
-		empty = false
-	}
-
-	if body.Req.Network != "" && body.Req.Network != job.Network {
-		job.Network = body.Req.Network
-		empty = false
-	}
-
-	if body.Req.NodeURL != "" && body.Req.NodeURL != job.NodeURL {
-		job.NodeURL = body.Req.NodeURL
-		empty = false
-	}
-
-	if body.Req.Privatekey != "" && body.Req.Privatekey != job.Privatekey {
-		job.Privatekey = body.Req.Privatekey
-		empty = false
-	}
-
-	if body.Req.Cronjob != "" && body.Req.Cronjob != job.Cronjob {
-		// Validate the cronjob received is correct
-		specParser := cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
-		_, err = specParser.Parse(body.Req.Cronjob)
-		if err != nil {
-			return &api.HandlerRes{
-				Payload:    api.ErrorInvalidCron,
-				HttpStatus: 400,
-				Err:        err,
-			}
-		}
-
-		job.Cronjob = body.Req.Cronjob
-		empty = false
-	}
-
-	// If empty is true, it means that no params will be updated so an error is returned
-	if empty {
-		err = fmt.Errorf("%s", "All params are empty or the same than the actual job")
-		return &api.HandlerRes{
-			Payload:    err.Error(),
-			HttpStatus: 400,
-			Err:        err,
-		}
+	// Check the inputs of the job and return the job with the updated values if there is no errors
+	job, err = ValidateInputs(job, body.Req)
+	if err != nil {
+		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 500, Err: err}
 	}
 
 	// Stop running job for updating the running cron
-	fmt.Println("status: ", job.Status)
 	if job.Status == provider.StatusRunning {
 		fmt.Println("Status running so stopping...")
 		ctx.Manager.Stop(job.ID)
 	}
 
+	// Setup new job with the values received
 	fmt.Println("Setting up ...")
 	err = ctx.Manager.Setup(job)
 	if err != nil {
-		// This is for keep running the before cronjob that was ok, since it wasn't updated
+		// This is for keep running the previous job that was ok, in case the job setup failed
 		ctx.Manager.Start(job.ID)
 		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 500, Err: err}
 	}
 	fmt.Println("Setted up!")
 
+	// Start job
+	fmt.Println("Starting ...")
+	ctx.Manager.Start(job.ID)
+	fmt.Println("Started!")
+
+	// Set job values and update them in the DB
 	fmt.Println("Updating...")
 	job.UpdatedAt = time.Now()
 	job.Status = provider.StatusRunning
@@ -137,10 +102,6 @@ func (UpdateJobHandler) Invoke(ctx Context) *api.HandlerRes {
 	}
 	fmt.Println("Updated!")
 
-	fmt.Println("Starting ...")
-	ctx.Manager.Start(job.ID)
-	fmt.Println("Started!")
-
-	res := map[string]interface{}{"id": job.ID, "status": job.Status}
+	res := map[string]interface{}{"job": job}
 	return &api.HandlerRes{Payload: res, HttpStatus: 200, Err: nil}
 }
