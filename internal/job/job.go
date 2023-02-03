@@ -6,6 +6,7 @@ import (
 	"github.com/darchlabs/jobs/internal/provider"
 )
 
+// Define Job type
 type Job struct {
 	ID           string         `json:"id,omitempty"`
 	Name         string         `json:"name"`

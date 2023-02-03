@@ -10,6 +10,7 @@ type S struct {
 	DB *leveldb.DB
 }
 
+// Method for creating a new S storage instance
 func New(filepath string) (*S, error) {
 	if filepath == "" {
 		return nil, fmt.Errorf("%s", "Empty filepath")

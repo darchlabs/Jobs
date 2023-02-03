@@ -25,7 +25,7 @@ func NewCreateJobsHandler(js *storage.Job) *CreateJobsHandler {
 }
 
 func (CreateJobsHandler) Invoke(ctx Context) *api.HandlerRes {
-	// Prepare body request struct. This is the top level struct that the validator'll use
+	// Prepare body request struct for parsing and validating
 	body := struct {
 		Job *job.Job `json:"job"`
 	}{}
