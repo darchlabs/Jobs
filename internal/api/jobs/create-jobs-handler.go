@@ -25,7 +25,7 @@ func NewCreateJobsHandler(js *storage.Job) *CreateJobsHandler {
 }
 
 func (CreateJobsHandler) Invoke(ctx Context) *api.HandlerRes {
-	// Prepare body request struct
+	// Prepare body request struct for parsing and validating
 	body := struct {
 		Job *job.Job `json:"job"`
 	}{}
@@ -33,47 +33,52 @@ func (CreateJobsHandler) Invoke(ctx Context) *api.HandlerRes {
 	// Parse body to Job struct
 	err := json.Unmarshal(ctx.c.Body(), &body)
 	if err != nil {
-		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 500, Err: err}
+		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 400, Err: err}
 	}
 
 	validate := validator.New()
-	validate.Struct(ctx.JobStorage)
+	err = validate.Struct(ctx.JobStorage)
+	if err != nil {
+		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 400, Err: err}
+	}
 
 	// generate id for database
 	id, err := shortid.Generate()
 	if err != nil {
-		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 500, Err: err}
+		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 400, Err: err}
 	}
 	body.Job.ID = id
 
 	if body.Job.Type == "cronjob" {
 		// Validate the cronjob received is correct
-		specParser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+		specParser := cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
 		_, err = specParser.Parse(body.Job.Cronjob)
 
 		if err != nil {
 			fmt.Println(err)
-			return &api.HandlerRes{Payload: err.Error(), HttpStatus: 500, Err: err}
+			return &api.HandlerRes{Payload: api.ErrorInvalidCron, HttpStatus: 400, Err: err}
 		}
 
 		// Execute manager in order to execute the job
 		err = ctx.Manager.Setup(body.Job)
 		if err != nil {
-			return &api.HandlerRes{Payload: err.Error(), HttpStatus: 500, Err: err}
+			return &api.HandlerRes{Payload: err.Error(), HttpStatus: 400, Err: err}
 		}
 		ctx.Manager.Start(id)
 
+	} else {
+		err = fmt.Errorf("only 'cronjob' type is supported now, but received '%s' type", err)
+		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 400, Err: err}
 	}
 
 	body.Job.CreatedAt = time.Now()
 	body.Job.Status = provider.StatusRunning
 
-
 	// Insert job in jobstorage DB
 	j, err := ctx.JobStorage.Insert(body.Job)
 	if err != nil {
 		fmt.Println(err)
-		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 500, Err: err}
+		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 400, Err: err}
 	}
 
 	return &api.HandlerRes{Payload: j, HttpStatus: 200, Err: nil}

@@ -1,0 +1,245 @@
+{
+	"info": {
+		"_postman_id": "2d20f5cb-b4d3-4edc-81bd-eb4f342034b7",
+		"name": "DarchLabs: Jobs",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "24172998"
+	},
+	"item": [
+		{
+			"name": "Get Providers",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://127.0.0.1:3030/api/v1/jobs/providers",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "3030",
+					"path": [
+						"api",
+						"v1",
+						"jobs",
+						"providers"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Jobs",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://127.0.0.1:3030/api/v1/jobs",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "3030",
+					"path": [
+						"api",
+						"v1",
+						"jobs"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create Jobs",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"job\": {\n        \"name\": \"job-1\",\n        \"providerId\": \"1\",\n        \"network\": \"goerli\",\n        \"address\": \"0x98f25ABE7FAeFE5bFbDB02F745D76Ce6661523fe\",\n        \"nodeUrl\": \"https://eth-goerli.g.alchemy.com/v2/iBz2dSgQkpZ4zr5aDFaW_FmTCq7SDQzi\",\n        \"privateKey\": \"f5d4b19c9904d78297bee9510e2cd79ab52d36294962749504ffd7fb4b7565cb\",\n\n        \"abi\": \"[\\n\\t\\t\\t{\\n\\t\\t\\t\\t\\\"inputs\\\": [],\\n\\t\\t\\t\\t\\\"name\\\": \\\"counter\\\",\\n\\t\\t\\t\\t\\\"outputs\\\": [\\n\\t\\t\\t\\t\\t{\\n\\t\\t\\t\\t\\t\\t\\\"internalType\\\": \\\"uint8\\\",\\n\\t\\t\\t\\t\\t\\t\\\"name\\\": \\\"\\\",\\n\\t\\t\\t\\t\\t\\t\\\"type\\\": \\\"uint8\\\"\\n\\t\\t\\t\\t\\t}\\n\\t\\t\\t\\t],\\n\\t\\t\\t\\t\\\"stateMutability\\\": \\\"view\\\",\\n\\t\\t\\t\\t\\\"type\\\": \\\"function\\\"\\n\\t\\t\\t},\\n\\t\\t\\t{\\n\\t\\t\\t\\t\\\"inputs\\\": [],\\n\\t\\t\\t\\t\\\"name\\\": \\\"getStatus\\\",\\n\\t\\t\\t\\t\\\"outputs\\\": [\\n\\t\\t\\t\\t\\t{\\n\\t\\t\\t\\t\\t\\t\\\"internalType\\\": \\\"bool\\\",\\n\\t\\t\\t\\t\\t\\t\\\"name\\\": \\\"\\\",\\n\\t\\t\\t\\t\\t\\t\\\"type\\\": \\\"bool\\\"\\n\\t\\t\\t\\t\\t}\\n\\t\\t\\t\\t],\\n\\t\\t\\t\\t\\\"stateMutability\\\": \\\"view\\\",\\n\\t\\t\\t\\t\\\"type\\\": \\\"function\\\"\\n\\t\\t\\t},\\n\\t\\t\\t{\\n\\t\\t\\t\\t\\\"inputs\\\": [],\\n\\t\\t\\t\\t\\\"name\\\": \\\"perform\\\",\\n\\t\\t\\t\\t\\\"outputs\\\": [],\\n\\t\\t\\t\\t\\\"stateMutability\\\": \\\"nonpayable\\\",\\n\\t\\t\\t\\t\\\"type\\\": \\\"function\\\"\\n\\t\\t\\t},\\n\\t\\t\\t{\\n\\t\\t\\t\\t\\\"inputs\\\": [\\n\\t\\t\\t\\t\\t{\\n\\t\\t\\t\\t\\t\\t\\\"internalType\\\": \\\"bool\\\",\\n\\t\\t\\t\\t\\t\\t\\\"name\\\": \\\"status\\\",\\n\\t\\t\\t\\t\\t\\t\\\"type\\\": \\\"bool\\\"\\n\\t\\t\\t\\t\\t}\\n\\t\\t\\t\\t],\\n\\t\\t\\t\\t\\\"name\\\": \\\"setStatus\\\",\\n\\t\\t\\t\\t\\\"outputs\\\": [],\\n\\t\\t\\t\\t\\\"stateMutability\\\": \\\"nonpayable\\\",\\n\\t\\t\\t\\t\\\"type\\\": \\\"function\\\"\\n\\t\\t\\t}\\n\\t\\t]\",\n\n \"type\": \"cronjob\",\n        \"cronjob\": \" */10 *  * * *  *\",\n        \"checkMethod\": \"getStatus\",\n        \"actionMethod\": \"perform\"\n\n    }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://127.0.0.1:3030/api/v1/jobs",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "3030",
+					"path": [
+						"api",
+						"v1",
+						"jobs"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Delete Job",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "http://127.0.0.1:3030/api/v1/jobs/:id",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "3030",
+					"path": [
+						"api",
+						"v1",
+						"jobs",
+						":id"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "fRXIxoA4R"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Start Job",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"id\": \"EIPNlSc4g\"}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://127.0.0.1:3030/api/v1/jobs/:id/start",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "3030",
+					"path": [
+						"api",
+						"v1",
+						"jobs",
+						":id",
+						"start"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "fRXIxoA4R"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Stop Job",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://127.0.0.1:3030/api/v1/jobs/:id/stop",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "3030",
+					"path": [
+						"api",
+						"v1",
+						"jobs",
+						":id",
+						"stop"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "fRXIxoA4R"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update Job",
+			"request": {
+				"method": "PATCH",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"job\": {\n\"network\": \"\",\n\"nodeUrl\": \"\",\n\"privateKey\": \"\",\n\"address\": \"\",\n\"cronjob\": \"*/20 * * * * *\",\n\"name\": \"updated-job\"\n}}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://127.0.0.1:3030/api/v1/jobs/:id",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "3030",
+					"path": [
+						"api",
+						"v1",
+						"jobs",
+						":id"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "fRXIxoA4R"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

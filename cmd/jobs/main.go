@@ -12,7 +12,6 @@ import (
 	"github.com/darchlabs/jobs/internal/config"
 	providermanager "github.com/darchlabs/jobs/internal/provider/manager"
 	"github.com/darchlabs/jobs/internal/storage"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gofiber/fiber/v2"
 	"github.com/kelseyhightower/envconfig"
 )
@@ -35,13 +34,9 @@ func main() {
 
 	// Instance job's storage and client
 	js := storage.NewJob(s)
-	client, err := ethclient.Dial(conf.NodeURL)
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	// Initialize manager with its params
-	m := providermanager.NewManager(js, client, conf.PrivateKey)
+	m := providermanager.NewManager(js)
 
 	// Initialize fiber
 	api := fiber.New()
@@ -79,7 +74,6 @@ func listenInterrupt(quit chan struct{}) {
 }
 
 // gracefullShutdown method used to close all synchronizer processes
-
 func gracefullShutdown(m *providermanager.M) {
 	// stop all cronjob tickers
 	for id := range m.CronMap {
@@ -88,7 +82,6 @@ func gracefullShutdown(m *providermanager.M) {
 
 	// close database connection
 	err := m.Jobstorage.Stop()
-
 	if err != nil {
 		log.Println(err)
 	}

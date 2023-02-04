@@ -2,53 +2,47 @@ package jobsapi
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/darchlabs/jobs/internal/api"
 	"github.com/darchlabs/jobs/internal/provider"
 	"github.com/darchlabs/jobs/internal/storage"
 )
 
-type StartJobHandler struct {
+type DeleteJobHandler struct {
 	storage *storage.Job
 }
 
-func NewStartJobHandler(js *storage.Job) *StartJobHandler {
-	return &StartJobHandler{
+func NewDeleteJobHandler(js *storage.Job) *DeleteJobHandler {
+	return &DeleteJobHandler{
 		storage: js,
 	}
 }
 
-func (StartJobHandler) Invoke(ctx Context) *api.HandlerRes {
-	// Get and check id
+func (DeleteJobHandler) Invoke(ctx Context) *api.HandlerRes {
+	// Get id param and assert is not empty
 	id := ctx.c.Params("id")
 	if id == "" {
 		err := fmt.Errorf("%s", "id param in route is empty")
 		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 500, Err: err}
 	}
 
-	// Get job using id
+	// Get and check that the job exists in DB
 	job, err := ctx.JobStorage.GetById(id)
 	if err != nil {
 		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 500, Err: err}
 	}
 
-	// Validate the job to start is not already running
+	// Stop job if is running
 	if job.Status == provider.StatusRunning {
-		err := fmt.Errorf("%s", "job is already running")
-		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 400, Err: err}
+		ctx.Manager.Stop(id)
 	}
-	// Start job using the job manager
-	ctx.Manager.Start(job.ID)
 
-	// Update job values
-	job.Status = provider.StatusRunning
-	job.UpdatedAt = time.Now()
-	job, err = ctx.JobStorage.Update(job)
+	// Delete job from jobstorage DB
+	err = ctx.JobStorage.Delete(id)
 	if err != nil {
 		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 500, Err: err}
 	}
 
-	res := map[string]interface{}{"id": job.ID, "status": job.Status}
+	res := map[string]interface{}{"id": job.ID, "status": "Deleted"}
 	return &api.HandlerRes{Payload: res, HttpStatus: 200, Err: nil}
 }
