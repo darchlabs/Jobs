@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/darchlabs/jobs/internal/job"
 	"github.com/darchlabs/jobs/internal/provider"
 	"github.com/darchlabs/jobs/internal/storage"
@@ -23,25 +21,24 @@ type Implementation interface {
 type Manager interface {
 	Setup(job *job.Job) error
 	Start(id string)
-	StartCurrentJobs()
 	Stop(id string)
+	StartCurrentJobs()
 }
 
 // Manager stuct
 type M struct {
 	Jobstorage *storage.Job
-	client     *ethclient.Client
-	privateKey string
 	CronMap    map[string]*cron.Cron
+	ChanMap    map[string]chan bool
 }
 
-func NewManager(js *storage.Job, client *ethclient.Client, pk string) *M {
+func NewManager(js *storage.Job) *M {
 	cronMap := make(map[string]*cron.Cron)
+	stopChan := make(map[string]chan bool)
 	m := &M{
 		Jobstorage: js,
-		client:     client,
-		privateKey: pk,
 		CronMap:    cronMap,
+		ChanMap:    stopChan,
 	}
 
 	return m
@@ -55,6 +52,7 @@ func (m *M) StartCurrentJobs() {
 		log.Fatal("cannot get current jobs in the storage")
 	}
 
+	// TODO(nb): add gorotuines to each loop iteration for making it fast?
 	for _, job := range currentJobs {
 		err := m.Setup(job)
 		if err != nil {
@@ -72,45 +70,101 @@ func (m *M) StartCurrentJobs() {
 
 // Method for creating a new manager provider
 func (m *M) Setup(job *job.Job) error {
-	if job.Type != "cronjob" && job.Type != "synchronizer" {
-		return fmt.Errorf("invalid '%s' job type", job.Type)
-	}
+	// Save the current cron, for if the new one fails to comeback to it
+	currentCron := m.CronMap[job.ID]
 
+	// Create new cron and cronjob instances
 	newCron := cron.New()
+	cronjob := NewCronjob(m, newCron)
 
-	// Cronjob based keeper implementation
-	if job.Type == "cronjob" {
-		cronjob := NewCronjob(m, newCron)
-		m.CronMap[job.ID] = newCron
+	// Check if the inputs for the cron are right
+	cronCTX, err := cronjob.Check(job)
+	if err != nil {
+		fmt.Println("err while checking job: ", err)
 
-		// Check if the inputs for the cron are right
-		cronCTX, err := cronjob.Check(job)
-		if err != nil {
+		if currentCron == nil {
 			return err
 		}
 
-		// Add job to the cron
-		stop := make(chan bool)
-		err = cronjob.AddJob(job, cronCTX, stop)
-		if err != nil {
+		// The cronjob will keep being the currentCron, not the new one
+		m.CronMap[job.ID] = currentCron
+
+		// Get job in DB for knowing if it's already created
+		job, dbErr := m.Jobstorage.GetById(job.ID)
+		if dbErr != nil {
+			fmt.Println("dbErr: ", dbErr)
+			// If it is not created, it won't update
 			return err
 		}
+
+		// The error is used as log
+		log := err.Error()
+		job.Logs = append(job.Logs, log)
+
+		// It updates the log field to the job in the db
+		_, updateErr := m.Jobstorage.Update(job)
+		if updateErr != nil {
+			fmt.Println("updateErr: ", updateErr)
+		}
+
+		return err
 	}
+
+	// Update cron map instance with new cron
+	m.CronMap[job.ID] = newCron
+
+	// Add job to the cron
+	stop := make(chan bool)
+	err = cronjob.AddJob(job, cronCTX, stop)
+	if err != nil {
+		m.CronMap[job.ID] = currentCron
+		return err
+	}
+
+	m.ChanMap[job.ID] = stop
 	return nil
 }
 
 func (m *M) Start(id string) {
-	c := m.CronMap[id]
+	// Get the cron instance of that job id
+	cron := m.CronMap[id]
 
 	fmt.Println("Starting cron: ", id)
-	c.Start()
+	// It'll wait the cronjob period to pass before starting the 1st job
+	cron.Start()
 	fmt.Println("Cron started!")
+
+	go m.listenStop(id)
+}
+
+// method that listens the cronjob for stopping it if needed
+func (m *M) listenStop(id string) {
+	// Define the cron stop channel
+	stop := m.ChanMap[id]
+
+	stopSignal := <-stop
+	if stopSignal {
+		job, err := m.Jobstorage.GetById(id)
+		if err != nil {
+			fmt.Println("err while getting the job: ", err)
+		}
+		fmt.Println("Stopping because of stop signal...")
+		m.Stop(id)
+
+		// Update status to stopped
+		job.Status = provider.StatusAutoStopped
+		_, err = m.Jobstorage.Update(job)
+		if err != nil {
+			fmt.Println("err while updating to error: ", err)
+		}
+	}
+
 }
 
 func (m *M) Stop(id string) {
-	c := m.CronMap[id]
+	// Get the cron instance of that job id
+	cron := m.CronMap[id]
 
 	fmt.Println("Stopping cron: ", id)
-	c.Stop()
-	fmt.Println("Cron stopped!")
+	cron.Stop()
 }

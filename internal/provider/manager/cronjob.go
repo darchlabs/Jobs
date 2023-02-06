@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/darchlabs/jobs/internal/api"
 	"github.com/darchlabs/jobs/internal/job"
 	"github.com/darchlabs/jobs/internal/provider"
 	sc "github.com/darchlabs/jobs/internal/provider/smart-contracts"
@@ -19,16 +20,12 @@ import (
 type Cronjob struct {
 	cron       *cron.Cron
 	jobstorage *storage.Job
-	client     *ethclient.Client
-	pk         string
 }
 
 func NewCronjob(ctx *M, cron *cron.Cron) *Cronjob {
 	return &Cronjob{
 		cron:       cron,
 		jobstorage: ctx.Jobstorage,
-		client:     ctx.client,
-		pk:         ctx.privateKey,
 	}
 }
 
@@ -37,6 +34,7 @@ type cronCTX struct {
 	signer   *bind.TransactOpts
 	abi      abi.ABI
 	contract *bind.BoundContract
+	client   *ethclient.Client
 }
 
 // Func for asserting that the data is ok, and returning the needed context for the cronjob
@@ -51,40 +49,54 @@ func (cj *Cronjob) Check(job *job.Job) (*cronCTX, error) {
 	fmt.Println("Getting network..")
 	chainId := getChainId(job.Network)
 	if chainId == int64(0) {
-		return nil, fmt.Errorf("invalid chain id for %s network", job.Network)
+		return nil, fmt.Errorf("%s", api.ErrorInvalidNetwork)
 	}
 	fmt.Println("Network obtained!")
 
-	fmt.Println("Getting signer...")
-	signer, err = sc.GetSigner(cj.pk, *cj.client, chainId, nil, nil)
+	fmt.Println("Getting client ...")
+	// Get client
+	client, err := ethclient.Dial(job.NodeURL)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s", api.ErrorInvalidClient)
+	}
+
+	// Validate client is working correctly
+	_, err = client.ChainID(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("%s", api.ErrorInvalidClient)
+	}
+	fmt.Println("Client obtained!")
+
+	fmt.Println("Getting signer...")
+	signer, err = sc.GetSigner(job.Privatekey, *client, chainId, nil, nil)
+	if err != nil {
+		return nil, fmt.Errorf("%s", api.ErrorInvalidSigner)
 	}
 	fmt.Println("Signer ready!")
 
-	/// @dev: The abi format must be JSON escaped in order to work correctly
 	fmt.Println("Parsing abi...")
 	parsedAbi, err = abi.JSON(strings.NewReader(job.Abi))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s", api.ErrorInvalidAbi)
 	}
 	fmt.Println("Abi parsed!")
 
 	// Check that the address indeed is deployed on the network
-	contractCode, err := cj.client.PendingCodeAt(context.Background(), common.HexToAddress(job.Address))
+	fmt.Println("Checking contract code exists...")
+	contractCode, err := client.PendingCodeAt(context.Background(), common.HexToAddress(job.Address))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s", api.ErrorInexistentAddress)
 	}
 
 	if len(contractCode) == 0 {
-		return nil, fmt.Errorf("%s", "the contract address doesn't exist")
+		return nil, fmt.Errorf("%s", api.ErrorInexistentAddress)
 	}
+	fmt.Println("Code exist in the blockchain!")
 
 	fmt.Println("Getting contract...")
-	contract = sc.GetContract(job.Address, parsedAbi, cj.client)
-
+	contract = sc.GetContract(job.Address, parsedAbi, client)
 	if contract == nil {
-		return nil, fmt.Errorf("there is no contract under the %s address and abi on the %s network", job.Address, job.Network)
+		return nil, fmt.Errorf("%s", api.ErrorInvalidContract)
 	}
 	fmt.Println("Contract ready!")
 
@@ -92,7 +104,7 @@ func (cj *Cronjob) Check(job *job.Job) (*cronCTX, error) {
 	fmt.Println("Getting actionMethod...")
 	actionMethod := parsedAbi.Methods[job.ActionMethod].String()
 	if actionMethod == "" {
-		return nil, fmt.Errorf("there is no %s method inside the contract abi", actionMethod)
+		return nil, fmt.Errorf("%s", api.ErrorInvalidAbi)
 	}
 	fmt.Println("actionMethod is OK!")
 
@@ -101,7 +113,12 @@ func (cj *Cronjob) Check(job *job.Job) (*cronCTX, error) {
 	if job.CheckMethod != nil {
 		checkMethod := parsedAbi.Methods[*job.CheckMethod].String()
 		if checkMethod == "" {
-			return nil, fmt.Errorf("there is no %s method inside the contract abi", checkMethod)
+			return nil, fmt.Errorf("%s", api.ErrorInvalidContract)
+		}
+
+		_, err := sc.Call(contract, client, job.Address, *job.CheckMethod, &bind.CallOpts{})
+		if err != nil {
+			return nil, fmt.Errorf("%s", api.ErrorInvalidContract)
 		}
 	}
 	fmt.Println("checkMethod is OK!")
@@ -110,6 +127,7 @@ func (cj *Cronjob) Check(job *job.Job) (*cronCTX, error) {
 		signer:   signer,
 		abi:      parsedAbi,
 		contract: contract,
+		client:   client,
 	}, err
 }
 
@@ -117,12 +135,13 @@ func (cj *Cronjob) AddJob(job *job.Job, ctx *cronCTX, stop chan bool) error {
 	// define log for making the errors more explicit
 	var log string
 	var err error
+	var errCounter uint8
+
+	// Set max times that the cron func can fail before being stopped
+	maxErrorsLimit := uint8(5)
 
 	// define variable for the cronjob to know if it must perform or not the job
 	perform := true
-
-	// If it is the first execution and fails, it is not necessary to update in the db since the job wasn't inserted
-	firstExec := true
 
 	// Create the cronjob func
 	err = cj.cron.AddFunc(job.Cronjob, func() {
@@ -132,16 +151,26 @@ func (cj *Cronjob) AddJob(job *job.Job, ctx *cronCTX, stop chan bool) error {
 		if job.CheckMethod != nil {
 			// Check if the response of the smart contract view function for the cronjob to know if it must perform actionMethod or not
 			fmt.Println("Checking method...")
-			res, err := sc.Call(ctx.contract, cj.client, job.Address, *job.CheckMethod, &bind.CallOpts{})
+			res, err := sc.Call(ctx.contract, ctx.client, job.Address, *job.CheckMethod, &bind.CallOpts{})
 			if err != nil {
+				errCounter += 1
 				log = fmt.Sprintf("Error while trying to call checkMethod: %v", err)
 
-				if !firstExec {
-					stopJobOnError(job, log, stop, nil)
+				if errCounter > maxErrorsLimit {
+					stopLog := fmt.Sprintf("Failed %v times so autostopped. Last error: %s", maxErrorsLimit, log)
+					updateJob(cj.jobstorage, job, stopLog)
+
+					stop <- true
 					return
 				}
 
-				stopJobOnError(job, log, stop, cj.jobstorage)
+				// Check if the job still doesn't exist, it doesn't need an update
+				_, err := cj.jobstorage.GetById(job.ID)
+				if err != nil {
+					return
+				}
+
+				updateJob(cj.jobstorage, job, log)
 				return
 			}
 			fmt.Println("Check method response: ", *res)
@@ -154,27 +183,38 @@ func (cj *Cronjob) AddJob(job *job.Job, ctx *cronCTX, stop chan bool) error {
 		// perform action method and see return if it is needed
 		if perform && err == nil {
 			fmt.Println("Performing tx...")
-			tx, err := sc.Perform(ctx.contract, cj.client, job.Address, job.ActionMethod, &bind.TransactOpts{
+			tx, err := sc.Perform(ctx.contract, ctx.client, job.Address, job.ActionMethod, &bind.TransactOpts{
 				From:     ctx.signer.From,
 				Signer:   ctx.signer.Signer,
 				GasLimit: ctx.signer.GasLimit,
 			}, nil)
 
 			if err != nil {
+				errCounter += 1
+				fmt.Println("errCounter: ", errCounter)
+
 				log = fmt.Sprintf("Error while trying to make the tx on performMethod: %v", err)
 
-				if !firstExec {
-					stopJobOnError(job, log, stop, nil)
+				if errCounter > maxErrorsLimit {
+					stopLog := fmt.Sprintf("Failed 3 times so stopped job. Last error: %s", log)
+					updateJob(cj.jobstorage, job, stopLog)
+
+					stop <- true
 					return
 				}
 
-				stopJobOnError(job, log, stop, cj.jobstorage)
+				// Check if the job still doesn't exist, it doesn't need an update
+				_, err := cj.jobstorage.GetById(job.ID)
+				if err != nil {
+					return
+				}
+
+				updateJob(cj.jobstorage, job, log)
 				return
 			}
-			fmt.Printf("Tx performed on %s network!: %s/n", job.Network, tx.Hash())
-
-
-			firstExec = false
+			// If it succed, the error counter comes back to zero
+			errCounter = 0
+			fmt.Printf("Tx performed on %s network!: %s \n", job.Network, tx.Hash())
 		}
 	})
 
@@ -185,29 +225,13 @@ func (cj *Cronjob) AddJob(job *job.Job, ctx *cronCTX, stop chan bool) error {
 	return nil
 }
 
-// TODO(nb): Implement a function that gets and returns the state of the service
-func GetState(id string) (state provider.State) {
-	return provider.StatusRunning
-}
-
-func stopJobOnError(job *job.Job, log string, stop chan bool, s *storage.Job) {
-	// Is the storage is passed as param, it means that an update in it is needed
-	if s != nil {
-		updateJob(s, job, log)
-	}
-
-	failed := true
-	stop <- failed
-}
-
 // Method for stopping cronjob when an error is occurred
 func updateJob(s *storage.Job, j *job.Job, errorLog string) {
 	// Update the status of the job on the storage
 	j.Status = provider.StatusError
 
-
 	// Update the logs field with the error msg
-	j.Logs = &errorLog
+	j.Logs = append(j.Logs, errorLog)
 
 	fmt.Println("Updating job...")
 	s.Update(j)

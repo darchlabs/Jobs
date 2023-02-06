@@ -8,7 +8,7 @@
 
 ## Definition
 
-Jobs is the generic module that contains different implementations for smart contracts off-chain interactions.
+Jobs is a service designed to manage executions over smart contracts methods based on time and on-chain logic, in an automatized way.
 
 ### Context
 
@@ -16,17 +16,9 @@ There are multiple options for jobs (or keepers) in order to manage off-chain sm
 
 ### Why Do We Do This?
 
-The purpose of this solution is to provide different implementations for the user to choose which he prefers the most in an easy way. Also, make frictionless the setup and funding process.
+The purpose of this module is to offer a cheaper, frictionless and autonomous (self-hosted) option for the user in order him to pay the real computing costs of the jobs he is running and not an expensive price derivated from changes in the token price.
 
-In addition, it also provides a dashboard with-well delivered information logs and metrics about the services that the user is consuming.
-
-Finally, inside this module could be integrated a cloud based solution for the user that cannot afford the expensive costs of the keepers today.
-
-### Diagrams
-
-- Architecture diagram:
-
-https://app.diagrams.net/#G1PxvFkkQKAgMXKkp0dnIGnzweYV3uBXMT
+In addition, we also want to make it easier to monitor and manage jobs, so it provides a flexible way for creating and managing (updating, stopping, starting or deleting if necessary) jobs and also for accessing to the logs of them.
 
 ### Proposed Solution
 
@@ -42,3 +34,9 @@ The code can be divided in different parts managing different tasks that will be
 - Write in a DB the state of the jobs providers being used, just like using the `synchronizer V2` for getting the smart contracts interactions and writing it in the DB
 
 - A dashboard that will the DB data in the frontend
+
+### Diagrams
+
+- Architecture diagram:
+
+https://app.diagrams.net/#G1PxvFkkQKAgMXKkp0dnIGnzweYV3uBXMT
