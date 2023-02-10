@@ -28,5 +28,5 @@ docker-login:
 
 docker: docker-login
 	@echo "[docker] pushing $(REGISTRY_URL)/$(SERVICE_NAME):$(VERSION)"
-	@docker buildx create --use --name builder
+	@docker buildx create --use 
 	@docker buildx build --platform linux/amd64,linux/arm64 --push -t $(DOCKER_USER)/$(SERVICE_NAME):$(VERSION) .
