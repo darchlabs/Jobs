@@ -1,19 +1,7 @@
 package client
 
-// Struct for DB
-type Provider struct {
-	ID       string   `json:"id"`
-	Name     string   `json:"name"`
-	Networks []string `json:"networks"`
+import "github.com/darchlabs/jobs/internal/provider"
+
+type ListProvidersResponse struct {
+	Data []*provider.Provider `json:"providers"`
 }
-
-// Define state variables for the provider's jobs
-type State string
-
-const (
-	StatusIdle        State = "idle"
-	StatusRunning     State = "running"
-	StatusStopped     State = "stopped"
-	StatusError       State = "error"
-	StatusAutoStopped State = "autoStopped"
-)
