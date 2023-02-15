@@ -1,0 +1,8 @@
+version: "3"
+services:
+  jobs:
+    image: darchlabs/jobs
+    ports:
+      - 3030:3030
+    env_file:
+      - .env
