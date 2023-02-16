@@ -1,9 +1,14 @@
-FROM golang:alpine as builder
-WORKDIR /app
-COPY . .
-RUN CGO_ENABLED=0 go build -o bin/jobs cmd/jobs/main.go
+## Declare golang builder
+FROM golang as builder
 
-FROM scratch
-WORKDIR /app
-COPY --from=builder /app/bin/jobs bin/jobs
-ENTRYPOINT [ "./bin/jobs" ]
+# Move to the app inside the docker
+WORKDIR /usr/src/app
+
+# Copy the repo inside the docker
+COPY . .
+
+# Build the jobs bin
+RUN go build -o jobs cmd/jobs/main.go
+
+## Exec jobs bin
+CMD ["./jobs"]

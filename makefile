@@ -10,6 +10,11 @@ rm:
 	@echo "[rm] Removing..."
 	@rm -rf bin
 
+build:
+	@echo "[building node]"
+	@docker build -t darchlabs/jobs -f ./Dockerfile --progress tty .
+	@echo "Build darchlabs-jobs docker image done ✔︎"
+
 compile: rm
 	@echo "[compile] Compiling..."
 	@go build -o $(BIN_FOLDER_PATH)/$(SERVICE_NAME) cmd/$(SERVICE_NAME)/main.go
@@ -21,6 +26,14 @@ linux: rm
 dev:
 	@echo "[dev] Running..."
 	@go run cmd/$(SERVICE_NAME)/main.go
+
+compose-up:
+	@echo "[compose-dev]: Running docker compose dev mode..."
+	@docker-compose -f docker-compose.yml up --build
+
+compose-stop:
+	@echo "[compose-dev]: Running docker compose dev mode..."
+	@docker-compose -f docker-compose.yml down
 
 docker-login:
 	@echo "[docker] Login to docker..."
