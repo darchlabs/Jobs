@@ -47,7 +47,7 @@ func (cj *Cronjob) Check(job *job.Job) (*cronCTX, error) {
 
 	// Setup cronjob func
 	fmt.Println("Getting network..")
-	chainId := getChainId(job.Network)
+	chainId := getChainID(job.Network)
 	if chainId == int64(0) {
 		return nil, fmt.Errorf("%s", api.ErrorInvalidNetwork)
 	}
