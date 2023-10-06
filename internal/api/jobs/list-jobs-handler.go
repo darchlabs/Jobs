@@ -16,10 +16,16 @@ func NewListJobsHandler(js *storage.Job) *ListJobsHandler {
 }
 
 func (ListJobsHandler) Invoke(ctx Context) *api.HandlerRes {
-	// Get elements from db
-	data, err := ctx.JobStorage.List()
+	// get user id
+	userID, err := api.GetUserIDFromRequestCtx(ctx.c)
 	if err != nil {
-		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 500, Err: err}
+		return &api.HandlerRes{Payload: nil, HttpStatus: 500, Err: err}
+	}
+
+	// Get elements from db
+	data, err := ctx.JobStorage.List(userID)
+	if err != nil {
+		return &api.HandlerRes{Payload: nil, HttpStatus: 500, Err: err}
 	}
 
 	// Prepare response

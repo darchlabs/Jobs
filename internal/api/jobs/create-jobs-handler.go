@@ -25,6 +25,12 @@ func NewCreateJobsHandler(js *storage.Job) *CreateJobsHandler {
 }
 
 func (CreateJobsHandler) Invoke(ctx Context) *api.HandlerRes {
+
+	fmt.Println("JEJE")
+	fmt.Println("JEJE")
+	fmt.Println("JEJE")
+	fmt.Println("JEJE")
+	fmt.Println("JEJE")
 	// Prepare body request struct for parsing and validating
 	body := struct {
 		Job *job.Job `json:"job"`
@@ -41,6 +47,13 @@ func (CreateJobsHandler) Invoke(ctx Context) *api.HandlerRes {
 	if err != nil {
 		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 400, Err: err}
 	}
+
+	// Get user id
+	userID, err := api.GetUserIDFromRequestCtx(ctx.c)
+	if err != nil {
+		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 400, Err: err}
+	}
+	body.Job.UserID = userID
 
 	// generate id for database
 	id, err := shortid.Generate()

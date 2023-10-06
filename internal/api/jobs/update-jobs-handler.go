@@ -38,7 +38,7 @@ func (UpdateJobHandler) Invoke(ctx Context) *api.HandlerRes {
 	id := ctx.c.Params("id")
 	if id == "" {
 		err := fmt.Errorf("%s", "id param in route is empty")
-		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 500, Err: err}
+		return &api.HandlerRes{Payload: nil, HttpStatus: 500, Err: err}
 	}
 
 	// Prepare body request struct for parsing and validating
@@ -49,26 +49,32 @@ func (UpdateJobHandler) Invoke(ctx Context) *api.HandlerRes {
 	// Parse body to Job struct
 	err := json.Unmarshal(ctx.c.Body(), &body)
 	if err != nil {
-		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 500, Err: err}
+		return &api.HandlerRes{Payload: nil, HttpStatus: 500, Err: err}
 	}
 
 	// Validate the job values to update are correct
 	validate := validator.New()
 	err = validate.Struct(ctx.JobStorage)
 	if err != nil {
-		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 500, Err: err}
+		return &api.HandlerRes{Payload: nil, HttpStatus: 500, Err: err}
+	}
+
+	// Get user id
+	userID, err := api.GetUserIDFromRequestCtx(ctx.c)
+	if err != nil {
+		return &api.HandlerRes{Payload: nil, HttpStatus: 500, Err: err}
 	}
 
 	// Get j ob using id
-	job, err := ctx.JobStorage.GetById(id)
+	job, err := ctx.JobStorage.GetById(id, userID)
 	if err != nil {
-		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 500, Err: err}
+		return &api.HandlerRes{Payload: nil, HttpStatus: 500, Err: err}
 	}
 
 	// Check the inputs of the job and return the job with the updated values if there is no errors
 	job, err = ValidateInputs(job, body.Req)
 	if err != nil {
-		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 500, Err: err}
+		return &api.HandlerRes{Payload: nil, HttpStatus: 500, Err: err}
 	}
 
 	// Stop running job for updating the running cron
@@ -83,7 +89,7 @@ func (UpdateJobHandler) Invoke(ctx Context) *api.HandlerRes {
 	if err != nil {
 		// This is for keep running the previous job that was ok, in case the job setup failed
 		ctx.Manager.Start(job.ID)
-		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 500, Err: err}
+		return &api.HandlerRes{Payload: nil, HttpStatus: 500, Err: err}
 	}
 	fmt.Println("Setted up!")
 
@@ -96,9 +102,9 @@ func (UpdateJobHandler) Invoke(ctx Context) *api.HandlerRes {
 	fmt.Println("Updating...")
 	job.UpdatedAt = time.Now()
 	job.Status = provider.StatusRunning
-	job, err = ctx.JobStorage.Update(job)
+	job, err = ctx.JobStorage.Update(job, userID)
 	if err != nil {
-		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 500, Err: err}
+		return &api.HandlerRes{Payload: nil, HttpStatus: 500, Err: err}
 	}
 	fmt.Println("Updated!")
 

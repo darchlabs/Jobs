@@ -22,14 +22,19 @@ func (DeleteJobHandler) Invoke(ctx Context) *api.HandlerRes {
 	// Get id param and assert is not empty
 	id := ctx.c.Params("id")
 	if id == "" {
-		err := fmt.Errorf("%s", "id param in route is empty")
-		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 500, Err: err}
+		return &api.HandlerRes{Payload: nil, HttpStatus: 500, Err: fmt.Errorf("%s", "id param in route is empty")}
+	}
+
+	// Get user id
+	userID, err := api.GetUserIDFromRequestCtx(ctx.c)
+	if err != nil {
+		return &api.HandlerRes{Payload: nil, HttpStatus: 500, Err: err}
 	}
 
 	// Get and check that the job exists in DB
-	job, err := ctx.JobStorage.GetById(id)
+	job, err := ctx.JobStorage.GetById(id, userID)
 	if err != nil {
-		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 500, Err: err}
+		return &api.HandlerRes{Payload: nil, HttpStatus: 500, Err: err}
 	}
 
 	// Stop job if is running
@@ -38,9 +43,9 @@ func (DeleteJobHandler) Invoke(ctx Context) *api.HandlerRes {
 	}
 
 	// Delete job from jobstorage DB
-	err = ctx.JobStorage.Delete(id)
+	err = ctx.JobStorage.Delete(id, userID)
 	if err != nil {
-		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 500, Err: err}
+		return &api.HandlerRes{Payload: nil, HttpStatus: 500, Err: err}
 	}
 
 	res := map[string]interface{}{"id": job.ID, "status": "Deleted"}
