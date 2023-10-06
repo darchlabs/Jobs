@@ -23,8 +23,6 @@ func NewJob(s *S) *Job {
 
 // Method for listing jobs array
 func (j *Job) List(userID string) ([]*job.Job, error) {
-	fmt.Printf("List: user %s", userID)
-
 	data := make([]*job.Job, 0)
 
 	var iter = j.storage.DB.NewIterator(nil, nil)
@@ -62,8 +60,6 @@ func (j *Job) List(userID string) ([]*job.Job, error) {
 
 // Method for getting job by its id
 func (j *Job) GetById(id string, userID string) (*job.Job, error) {
-	fmt.Println("ZOZOZOZOZO")
-	fmt.Println("ZOZOZOZOZO", id)
 	var iter = j.storage.DB.NewIterator(nil, nil)
 	if userID != "" {
 		prefix := []byte(userID + ":" + id)
@@ -72,11 +68,7 @@ func (j *Job) GetById(id string, userID string) (*job.Job, error) {
 
 	for iter.Next() {
 		key := iter.Key()
-		fmt.Println("------------------")
-		fmt.Println("iter.Next()", string(key))
-		fmt.Println("------------------")
 		keyParts := strings.Split(string(key), ":")
-		fmt.Printf("%+v\n", keyParts)
 
 		if len(keyParts) == 2 && keyParts[1] == id {
 			var job *job.Job

@@ -38,9 +38,6 @@ func (StopJobHandler) Invoke(ctx Context) *api.HandlerRes {
 	if err != nil {
 		return &api.HandlerRes{Payload: nil, HttpStatus: 500, Err: err}
 	}
-	fmt.Println("AFTER")
-	fmt.Println("AFTER")
-	fmt.Println("AFTER")
 
 	// Validate the job to stop is running
 	if job.Status != provider.StatusRunning {

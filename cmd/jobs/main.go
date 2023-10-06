@@ -43,11 +43,6 @@ func main() {
 	// Initialize fiber
 	api := fiber.New()
 
-	fmt.Println("BACKOFFICE")
-	fmt.Println("BACKOFFICE")
-	fmt.Println("BACKOFFICE")
-	fmt.Println("BACKOFFICE", conf.BackofficeApiURL)
-
 	// define http client
 	httpClient := client.New(&client.Config{
 		Client:  http.DefaultClient,

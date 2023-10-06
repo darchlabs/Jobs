@@ -25,12 +25,6 @@ func NewCreateJobsHandler(js *storage.Job) *CreateJobsHandler {
 }
 
 func (CreateJobsHandler) Invoke(ctx Context) *api.HandlerRes {
-
-	fmt.Println("JEJE")
-	fmt.Println("JEJE")
-	fmt.Println("JEJE")
-	fmt.Println("JEJE")
-	fmt.Println("JEJE")
 	// Prepare body request struct for parsing and validating
 	body := struct {
 		Job *job.Job `json:"job"`
