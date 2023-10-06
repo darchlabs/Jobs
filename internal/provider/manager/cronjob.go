@@ -165,7 +165,7 @@ func (cj *Cronjob) AddJob(job *job.Job, ctx *cronCTX, stop chan bool) error {
 				}
 
 				// Check if the job still doesn't exist, it doesn't need an update
-				_, err := cj.jobstorage.GetById(job.ID)
+				_, err := cj.jobstorage.GetById(job.ID, "")
 				if err != nil {
 					return
 				}
@@ -204,7 +204,7 @@ func (cj *Cronjob) AddJob(job *job.Job, ctx *cronCTX, stop chan bool) error {
 				}
 
 				// Check if the job still doesn't exist, it doesn't need an update
-				_, err := cj.jobstorage.GetById(job.ID)
+				_, err := cj.jobstorage.GetById(job.ID, "")
 				if err != nil {
 					return
 				}
@@ -234,6 +234,6 @@ func updateJob(s *storage.Job, j *job.Job, errorLog string) {
 	j.Logs = append(j.Logs, errorLog)
 
 	fmt.Println("Updating job...")
-	s.Update(j)
+	s.Update(j, "")
 	fmt.Println("Job updated!")
 }
