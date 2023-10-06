@@ -46,7 +46,7 @@ func NewManager(js *storage.Job) *M {
 
 func (m *M) StartCurrentJobs() {
 	// get jobs from db
-	currentJobs, err := m.Jobstorage.List()
+	currentJobs, err := m.Jobstorage.List("")
 	if err != nil {
 		// Used log fatal 'cause returning a nil could produce unexpected behaviours
 		log.Fatal("cannot get current jobs in the storage")
@@ -90,7 +90,7 @@ func (m *M) Setup(job *job.Job) error {
 		m.CronMap[job.ID] = currentCron
 
 		// Get job in DB for knowing if it's already created
-		job, dbErr := m.Jobstorage.GetById(job.ID)
+		job, dbErr := m.Jobstorage.GetById(job.ID, "")
 		if dbErr != nil {
 			fmt.Println("dbErr: ", dbErr)
 			// If it is not created, it won't update
@@ -102,7 +102,7 @@ func (m *M) Setup(job *job.Job) error {
 		job.Logs = append(job.Logs, log)
 
 		// It updates the log field to the job in the db
-		_, updateErr := m.Jobstorage.Update(job)
+		_, updateErr := m.Jobstorage.Update(job, "")
 		if updateErr != nil {
 			fmt.Println("updateErr: ", updateErr)
 		}
@@ -144,7 +144,7 @@ func (m *M) listenStop(id string) {
 
 	stopSignal := <-stop
 	if stopSignal {
-		job, err := m.Jobstorage.GetById(id)
+		job, err := m.Jobstorage.GetById(id, "")
 		if err != nil {
 			fmt.Println("err while getting the job: ", err)
 		}
@@ -153,7 +153,7 @@ func (m *M) listenStop(id string) {
 
 		// Update status to stopped
 		job.Status = provider.StatusAutoStopped
-		_, err = m.Jobstorage.Update(job)
+		_, err = m.Jobstorage.Update(job, "")
 		if err != nil {
 			fmt.Println("err while updating to error: ", err)
 		}

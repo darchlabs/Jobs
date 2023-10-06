@@ -3,10 +3,12 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/darchlabs/backoffice/pkg/client"
 	jobsapi "github.com/darchlabs/jobs/internal/api/jobs"
 	"github.com/darchlabs/jobs/internal/api/providers"
 	"github.com/darchlabs/jobs/internal/config"
@@ -27,7 +29,7 @@ func main() {
 	}
 
 	// Initialize storage
-	s, err := storage.New(conf.DatabaseURL)
+	s, err := storage.New(conf.DatabaseFilepath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -41,9 +43,15 @@ func main() {
 	// Initialize fiber
 	api := fiber.New()
 
+	// define http client
+	httpClient := client.New(&client.Config{
+		Client:  http.DefaultClient,
+		BaseURL: conf.BackofficeApiURL,
+	})
+
 	// Configure routers
 	providers.Route(api)
-	jobsapi.Route(api, jobsapi.Context{JobStorage: js, Manager: m})
+	jobsapi.Route(api, jobsapi.Context{JobStorage: js, Manager: m, HTTPClient: httpClient})
 
 	// Start already created jobs
 	go m.StartCurrentJobs()

@@ -42,6 +42,13 @@ func (CreateJobsHandler) Invoke(ctx Context) *api.HandlerRes {
 		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 400, Err: err}
 	}
 
+	// Get user id
+	userID, err := api.GetUserIDFromRequestCtx(ctx.c)
+	if err != nil {
+		return &api.HandlerRes{Payload: err.Error(), HttpStatus: 400, Err: err}
+	}
+	body.Job.UserID = userID
+
 	// generate id for database
 	id, err := shortid.Generate()
 	if err != nil {
