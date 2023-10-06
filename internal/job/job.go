@@ -24,4 +24,5 @@ type Job struct {
 	CreatedAt    time.Time      `json:"createdAt,omitempty"`
 	UpdatedAt    time.Time      `json:"updatedAt,omitempty"`
 	Logs         []string       `json:"logs,omitempty"`
+	UserID       string         `json:"user_id"`
 }
